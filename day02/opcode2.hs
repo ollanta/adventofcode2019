@@ -1,7 +1,9 @@
 import qualified Data.Array as A
 
+
 main :: IO ()
 main = interact (showD . solve . readD)
+
 
 readD :: String -> [Integer]
 readD "" = []
@@ -11,25 +13,31 @@ readD s  = read s' : readD s'''
     s''' = dropWhile (==',') s''
 
 
-showD :: [(Integer,Integer)] -> String
-showD = show -- . head
+type Program = A.Array Integer Integer
+
+
+showD :: [(Integer, Integer)] -> String
+showD = unlines . map showD'
+  where
+    showD' (noun, verb) = "noun:" ++ show noun ++ " verb:" ++ show verb ++ " sum:" ++ show (noun*100+verb)
+
 
 solve :: [Integer] -> [(Integer, Integer)]
 solve list = runs
   where
-    l = toInteger (length list - 1)
-    program = A.listArray (0 :: Integer, l) list
+    l = toInteger (length list) - 1
+    program = A.listArray (0, l) list
     goal = 19690720
     runs = [(noun, verb) | noun <- [0..99], verb <- [0..99], let p' = initRun noun verb program, p' A.! 0 == goal]
-    
 
 
-initRun :: Integer -> Integer -> A.Array Integer Integer -> A.Array Integer Integer
+initRun :: Integer -> Integer -> Program -> Program
 initRun noun verb program = run 0 program'
   where
     program' = program A.// [(1,noun), (2,verb)]
 
-run :: Integer -> A.Array Integer Integer -> A.Array Integer Integer
+
+run :: Integer -> Program -> Program
 run i p
   | op == 99 = p
   | op == 1  = run (i+4) padd

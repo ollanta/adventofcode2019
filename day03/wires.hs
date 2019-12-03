@@ -1,6 +1,5 @@
-import Data.Set as S
-import Data.List as L
-import Prelude as P
+import qualified Data.Set as S
+import qualified Data.List as L
 
 
 main :: IO ()
@@ -10,50 +9,53 @@ main = interact (showD . solve . readD)
 data Direction = DUp | DDown | DRight | DLeft
   deriving (Eq, Show)
 
-
 type Point = (Int, Int)
 
-type Line = (Direction, Int)
+type Wire = (Direction, Int)
 
 
-readD :: String -> [[Line]]
-readD = P.map readLines . lines
+readD :: String -> [[Wire]]
+readD = map readWires . lines
   where
-    readLines "" = []
-    readLines s  = readL s' : readLines s'''
+    readWires "" = []
+    readWires s  = readWire s' : readWires s'''
       where
         (s', s'') = span (/= ',') s
         s'''      = dropWhile (==',') s''
-    readL ('R':s) = (DRight, read s)
-    readL ('L':s) = (DLeft, read s)
-    readL ('U':s) = (DUp, read s)
-    readL ('D':s) = (DDown, read s)
+    readWire ('R':s) = (DRight, read s)
+    readWire ('L':s) = (DLeft, read s)
+    readWire ('U':s) = (DUp, read s)
+    readWire ('D':s) = (DDown, read s)
 
 
-
---solve :: [[Line]] -> [Point]
-solve (ls1:ls2:_) = L.sort . P.map v . S.toList $ S.intersection ps1 ps2
+solve :: [[Wire]] -> [(Int, (Int, Int))]
+solve (ws1:ws2:_) = L.sort $ zip distances intersections
   where
-    ps1 = pointset ls1
-    ps2 = pointset ls2
-    v (x,y) = (abs(x)+abs(y),x,y)
+    ps1 = pointset ws1
+    ps2 = pointset ws2
+    intersections = S.toList $ S.intersection ps1 ps2
+    distances = map (\(x,y) -> abs(x) + abs(y)) intersections
 
 
-pointset :: [Line] -> Set Point
-pointset ls = ps' (0,0) ls
+move :: Point -> Wire -> Point
+move (x,y) (DUp,   l) = (x, y+l)
+move (x,y) (DDown, l) = (x, y-l)
+move (x,y) (DRight,l) = (x+l, y)
+move (x,y) (DLeft, l) = (x-l, y)
+
+
+pointset :: [Wire] -> S.Set Point
+pointset ws = ps' (0,0) ws
   where
     ps' _ []     = S.empty
-    ps' p (l:ls) = S.union (pl p l) (ps' (move p l) ls)
-      where
-        move (x,y) (DUp, l) = (x, y+l)
-        move (x,y) (DDown, l) = (x, y-l)
-        move (x,y) (DRight, l) = (x+l, y)
-        move (x,y) (DLeft, l) = (x-l, y)
-        
-        pl (x,y) (DUp, l) = S.fromList [(x,y+k) | k <- [0..l]]
-        pl (x,y) (DDown, l) = S.fromList [(x,y-k) | k <- [0..l]]
-        pl (x,y) (DRight, l) = S.fromList [(x+k,y) | k <- [0..l]]
-        pl (x,y) (DLeft, l) = S.fromList [(x-k,y) | k <- [0..l]]
+    ps' p (w:ws) = S.union (wireToPoints p w) (ps' (move p w) ws)
 
 
-showD = unlines . P.map show
+wireToPoints :: Point -> Wire -> S.Set Point
+wireToPoints (x,y) (DUp, l) = S.fromList [(x,y+k) | k <- [0..l]]
+wireToPoints (x,y) (DDown, l) = S.fromList [(x,y-k) | k <- [0..l]]
+wireToPoints (x,y) (DRight, l) = S.fromList [(x+k,y) | k <- [0..l]]
+wireToPoints (x,y) (DLeft, l) = S.fromList [(x-k,y) | k <- [0..l]]
+
+
+showD = show . head . drop 1

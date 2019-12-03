@@ -6,8 +6,7 @@ main :: IO ()
 main = interact (showD . solve . readD)
 
 
-data Direction = DUp | DDown | DRight | DLeft
-  deriving (Eq, Show)
+type Direction = (Int, Int)
 
 type Point = (Int, Int)
 
@@ -22,10 +21,10 @@ readD = map readWires . lines
       where
         (s', s'') = span (/= ',') s
         s'''      = dropWhile (==',') s''
-    readWire ('R':s) = (DRight, read s)
-    readWire ('L':s) = (DLeft, read s)
-    readWire ('U':s) = (DUp, read s)
-    readWire ('D':s) = (DDown, read s)
+    readWire ('R':s) = ((1, 0), read s)
+    readWire ('L':s) = ((-1,0), read s)
+    readWire ('U':s) = ((0, 1), read s)
+    readWire ('D':s) = ((0,-1), read s)
 
 
 solve :: [[Wire]] -> [(Int, (Int, Int))]
@@ -38,10 +37,7 @@ solve (ws1:ws2:_) = L.sort $ zip distances intersections
 
 
 move :: Point -> Wire -> Point
-move (x,y) (DUp,   l) = (x, y+l)
-move (x,y) (DDown, l) = (x, y-l)
-move (x,y) (DRight,l) = (x+l, y)
-move (x,y) (DLeft, l) = (x-l, y)
+move (x,y) ((dx,dy),l) = (x+dx*l, y+dy*l)
 
 
 pointset :: [Wire] -> S.Set Point
@@ -52,10 +48,9 @@ pointset ws = ps' (0,0) ws
 
 
 wireToPoints :: Point -> Wire -> S.Set Point
-wireToPoints (x,y) (DUp, l) = S.fromList [(x,y+k) | k <- [0..l]]
-wireToPoints (x,y) (DDown, l) = S.fromList [(x,y-k) | k <- [0..l]]
-wireToPoints (x,y) (DRight, l) = S.fromList [(x+k,y) | k <- [0..l]]
-wireToPoints (x,y) (DLeft, l) = S.fromList [(x-k,y) | k <- [0..l]]
+wireToPoints (x,y) ((dx, dy), l)
+  | dx == 0 = S.fromList [(x,y') | y' <- [y,y+dy..y+dy*l]]
+  | dy == 0 = S.fromList [(x',y) | x' <- [x,x+dx..x+dx*l]]
 
 
 showD = show . head . drop 1

@@ -6,33 +6,23 @@ main = interact (show . solve . readD)
 
 
 readD :: String -> (Int, Int)
-readD s = p
+readD s = (low, high)
   where
-    Right p = parse readP "" s
-    readP = do
-      low  <- read <$> many digit
-      char '-'
-      high <- read <$> many digit
-      return (low, high)
+    Right [low, high] = parse readP "" s
+    readP = (read <$> many digit) `sepBy` char '-'
 
 
 solve :: (Int, Int) -> Int
-solve (low, high) = length . filter twoAdjacent . filter monotonic . map toIntList $ allPasswords
+solve (low, high) = length . filter twoAdjacent . filter monotonic . map show $ [low..high]
   where
-    toIntList :: Int -> [Int]
-    toIntList = map (read.(:[])) . show
-    allPasswords  = [low..high]
-
-    twoAdjacent :: [Int] -> Bool
-    twoAdjacent [] = False
-    twoAdjacent (i:is)
-      | length dupes == 1 = True
+    twoAdjacent is@(i:_)
+      | length dupes == 2 = True
       | otherwise         = twoAdjacent rest
       where
         (dupes, rest) = span (==i) is
+    twoAdjacent [] = False
 
-    monotonic :: [Int] -> Bool
-    monotonic [i] = True
     monotonic (i:j:js)
       | i <= j    = True && monotonic (j:js)
       | otherwise = False
+    monotonic [i] = True

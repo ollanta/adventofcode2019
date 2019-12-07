@@ -2,7 +2,10 @@ import qualified Data.Array as A
 import Data.List
 
 main :: IO ()
-main = interact (showD . solve . readD)
+main = do
+  interact (showD . solve . readD)
+  putStrLn ""
+
 
 readD :: String -> [Integer]
 readD "" = []
@@ -12,8 +15,8 @@ readD s  = read s' : readD s'''
     s''' = dropWhile (==',') s''
 
 
---showD :: [Integer] -> String
-showD = unlines . map show . sort -- . head
+showD = show
+
 
 toProgram ::[Integer] -> A.Array Integer Integer
 toProgram list = program
@@ -22,15 +25,15 @@ toProgram list = program
     program = A.listArray (0 :: Integer, l) list
 
 
-solve :: [Integer] -> [([Integer], [Integer])]
-solve list = map (\s -> (runAmps program s, s)) allSettings
+solve :: [Integer] -> (Integer, [Integer])
+solve list = maximum $ map (\s -> (runAmps program s, s)) allSettings
   where
     program = toProgram list
-    allSettings :: [[Integer]]
-    allSettings = [[s1,s2,s3,s4,s5] | s1 <- [5..9], s2 <- [5..9], s3 <- [5..9], s4 <- [5..9], s5 <- [5..9], s1 /= s2, s1 /= s3, s1 /= s4, s1 /= s5, s2/=s3, s2/=s4, s2/=s5, s3/=s4, s3/=s5, s4/=s5]
+    allSettings = permutations [5..9]
 
-runAmps :: A.Array Integer Integer -> [Integer] -> [Integer]
-runAmps program [s1,s2,s3,s4,s5] = e
+
+runAmps :: A.Array Integer Integer -> [Integer] -> Integer
+runAmps program [s1,s2,s3,s4,s5] = last e
   where
     a = run 0 (s1:0:e) program
     b = run 0 (s2:a) program

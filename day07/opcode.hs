@@ -2,7 +2,10 @@ import qualified Data.Array as A
 import Data.List
 
 main :: IO ()
-main = interact (showD . solve . readD)
+main = do
+  interact (showD . solve . readD)
+  putStrLn ""
+
 
 readD :: String -> [Integer]
 readD "" = []
@@ -12,8 +15,8 @@ readD s  = read s' : readD s'''
     s''' = dropWhile (==',') s''
 
 
---showD :: [Integer] -> String
-showD = unlines . map show . sort -- . head
+showD = show
+
 
 toProgram ::[Integer] -> A.Array Integer Integer
 toProgram list = program
@@ -22,22 +25,25 @@ toProgram list = program
     program = A.listArray (0 :: Integer, l) list
 
 
-solve :: [Integer] -> [(Integer, [Integer])]
-solve list = map (\s -> (runAmps program s, s)) allSettings
+solve :: [Integer] -> (Integer, [Integer])
+solve list = maximum $ map (\s -> (runAmps program s, s)) allSettings
   where
     program = toProgram list
-    allSettings :: [[Integer]]
-    allSettings = [[s1,s2,s3,s4,s5] | s1 <- [0..4], s2 <- [0..4], s3 <- [0..4], s4 <- [0..4], s5 <- [0..4], s1 /= s2, s1 /= s3, s1 /= s4, s1 /= s5, s2/=s3, s2/=s4, s2/=s5, s3/=s4, s3/=s5, s4/=s5]
+    allSettings = permutations [0..4]
+
 
 runAmps :: A.Array Integer Integer -> [Integer] -> Integer
-runAmps program [s1,s2,s3,s4,s5] = last e
+runAmps program settings = last $ last outputs
   where
+    inputs  = zipWith (\s output -> [s,last output]) settings ([0]:outputs)
+    outputs = map (\input -> run 0 input program) inputs
+{-
     a = run 0 [s1,0] program
     b = run 0 [s2,last a] program
     c = run 0 [s3,last b] program
     d = run 0 [s4,last c] program
     e = run 0 [s5,last d] program
-
+-}
 
 run :: Integer -> [Integer] -> A.Array Integer Integer -> [Integer]
 run i rs p

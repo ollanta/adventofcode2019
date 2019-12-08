@@ -17,7 +17,6 @@ showD ls = unlines . map (concatMap showC) $ helper ls
     showC 0 = " "
     helper [] = []
     helper l  = take 25 l : helper (drop 25 l)
-  
 
 
 readD :: String -> [Integer]
@@ -37,6 +36,7 @@ countl :: Int -> [Integer] -> Int
 countl c l = length $ filter ((==c) . fromInteger) l
 
 
+overlap :: [Integer] -> [Integer] -> [Integer]
 overlap = zipWith cmerge
   where
     cmerge 2 b = b
@@ -47,5 +47,3 @@ solve :: [Integer] -> [Integer]
 solve l = foldr1 overlap layers
   where
     layers = toLayers l
-
-

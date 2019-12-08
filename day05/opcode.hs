@@ -36,14 +36,13 @@ run i p
 
     r1 = p A.! (i+1)
     r2 = p A.! (i+2)
+    r3 = p A.! (i+3)
 
     v1 = p A.! r1
     v2 = p A.! r2
 
     op1 = if m1 == 1 then r1 else v1
     op2 = if m2 == 1 then r2 else v2
-
-    r3 = p A.! (i+3)
 
     padd = p A.// [(r3, op1+op2)]
     pmul = p A.// [(r3, op1*op2)]

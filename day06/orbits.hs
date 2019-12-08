@@ -1,5 +1,6 @@
 import Text.Parsec
-import qualified Data.Map as M
+import Data.Tree
+
 
 main :: IO ()
 main = interact (show . solve . readD)
@@ -17,9 +18,9 @@ readD s = orbits
       return (p1, p2)
 
 
-solve orbs = run 1 "COM"
+solve :: [(String,String)] -> Int
+solve orbs = nOrbits
   where
-    run n oid = case filter ((==oid) . fst) orbs of
-      [] -> 0
-      os -> n * length os + sum rest
-        where rest = map (run (n+1) . snd) os
+    orbitTree = unfoldTree (\oid -> (oid, orbiting oid)) "COM"
+    orbiting oid = map snd . filter ((==oid) . fst) $ orbs
+    nOrbits = sum $ zipWith (*) [0..] (map length $ levels orbitTree)

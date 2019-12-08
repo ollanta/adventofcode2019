@@ -1,5 +1,5 @@
 import Text.Parsec
-import qualified Data.Set as  S
+import Data.Tree
 import Data.List
 
 main :: IO ()
@@ -18,16 +18,33 @@ readD s = orbits
       return (p1, p2)
 
 
-solve :: [(String,String)] -> Int
-solve orbs = length combinedPath - length commonPath - 2
+data Distance = Not | Count Int | Dist Int
+  deriving (Eq, Show)
+
+instance Semigroup Distance where
+  Dist d <> _ = Dist d
+  _ <> Dist d = Dist d
+
+  Count a <> Count b = Dist (a+b)
+  Count a <> _ = Count a
+  _ <> Count b = Count b
+
+  Not <> Not = Not
+
+
+solve orbs = distance
   where
-    commonPath   = intersect santaPath youPath
-    combinedPath = nub $ (santaPath ++ youPath)
-    santaPath = find "COM" "SAN" []
-    youPath = find "COM" "YOU" []
-    find :: String -> String -> [String] -> [String]
-    find oid goal os
-      | oid == goal = goal : os
-      | next == []  = []
-      | otherwise   = concatMap (\(_,o) -> find o goal (oid:os)) next
-        where next = filter ((==oid) . fst) orbs
+    orbitTree = unfoldTree (\oid -> (oid, orbiting oid)) "COM"
+    orbiting oid = map snd . filter ((==oid) . fst) $ orbs
+
+    Dist distance = foldTree countDist $ fmap isSanOrYou orbitTree
+    isSanOrYou "YOU" = Count 0
+    isSanOrYou "SAN" = Count 0
+    isSanOrYou _     = Not
+
+    countDist d ds = d <> increment childsum
+      where
+        childsum = foldr (<>) Not ds
+        increment (Dist d) = Dist d
+        increment (Count d) = Count (d+1)
+        increment Not = Not

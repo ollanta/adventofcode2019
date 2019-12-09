@@ -25,27 +25,37 @@ toProgram list = program
 
 
 solve :: [Integer] -> [[Integer]]
-solve list = [run 0 0 [1] program, -- part1
-              run 0 0 [2] program] -- part2
+solve list = [run part1,
+              run part2]
   where
+    part1 = Computer 0 0 [1] program
+    part2 = Computer 0 0 [2] program
     program = toProgram list
+
+
+data Computer = Computer {
+  pointer :: Integer,
+  relPointer :: Integer,
+  inputs :: [Integer],
+  program :: M.HashMap Integer Integer
+}
 
 
 data Param = Pos !Integer | Val !Integer
 
 
-run :: Integer -> Integer -> [Integer] -> M.HashMap Integer Integer -> [Integer]
-run i reli rs prog
+run :: Computer -> [Integer]
+run c@Computer{pointer=i, relPointer=reli, inputs=rs, program=prog}
   | op == 99 = []
-  | op == 1  = run (i+4) reli rs padd
-  | op == 2  = run (i+4) reli rs pmul
-  | op == 3  = run (i+2) reli readRest (pinsert (arg 1) readNext)
-  | op == 4  = rarg 1 : run (i+2) reli rs prog
-  | op == 5  = run (jumpif True)  reli rs prog
-  | op == 6  = run (jumpif False) reli rs prog
-  | op == 7  = run (i+4) reli rs pless
-  | op == 8  = run (i+4) reli rs pequals
-  | op == 9  = run (i+2) (reli + rarg 1) rs prog
+  | op == 1  = run c{pointer=i+4, program=padd}
+  | op == 2  = run c{pointer=i+4, program=pmul}
+  | op == 3  = run c{pointer=i+2, inputs=readRest, program=pinsert (arg 1) readNext}
+  | op == 4  = rarg 1 : run c{pointer=i+2}
+  | op == 5  = run c{pointer=jumpif True}
+  | op == 6  = run c{pointer=jumpif False}
+  | op == 7  = run c{pointer=i+4, program=pless}
+  | op == 8  = run c{pointer=i+4, program=pequals}
+  | op == 9  = run c{pointer=i+2, relPointer=reli + rarg 1}
   where
     plookup (Pos k) = M.lookupDefault 0 k prog
     plookup (Val v) = v

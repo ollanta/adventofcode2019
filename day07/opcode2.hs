@@ -33,13 +33,12 @@ solve list = maximum $ map (\s -> (runAmps program s, s)) allSettings
 
 
 runAmps :: A.Array Integer Integer -> [Integer] -> Integer
-runAmps program [s1,s2,s3,s4,s5] = last e
+runAmps program settings = last $ last outputs
   where
-    a = run 0 (s1:0:e) program
-    b = run 0 (s2:a) program
-    c = run 0 (s3:b) program
-    d = run 0 (s4:c) program
-    e = run 0 (s5:d) program
+    n = length settings
+    inits = [0]:repeat []
+    inputs = zipWith3 (\s i rest -> s:i ++ rest) settings inits (last outputs:outputs)
+    outputs = map (\input -> run 0 input program) inputs
 
 
 run :: Integer -> [Integer] -> A.Array Integer Integer -> [Integer]

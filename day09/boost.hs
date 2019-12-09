@@ -15,7 +15,7 @@ readD s  = read s' : readD s'''
     s''' = dropWhile (==',') s''
 
 
-showD = show
+showD = unlines . map show
 
 
 toProgram ::[Integer] -> M.HashMap Integer Integer
@@ -31,57 +31,55 @@ solve list = [run 0 0 [1] program, -- part1
     program = toProgram list
 
 
+data Param = Pos !Integer | Val !Integer
+
+
 run :: Integer -> Integer -> [Integer] -> M.HashMap Integer Integer -> [Integer]
-run i rbase rs p
+run i reli rs prog
   | op == 99 = []
-  | op == 1  = run (i+4) rbase rs padd
-  | op == 2  = run (i+4) rbase rs pmul
-  | op == 3  = run (i+2) rbase (drop 1 rs) (M.insert p1 (head rs) p)
-  | op == 4  = op1 : run (i+2) rbase rs p
-  | op == 5  = run (jumpif True)  rbase rs p
-  | op == 6  = run (jumpif False) rbase rs p
-  | op == 7  = run (i+4) rbase rs pless
-  | op == 8  = run (i+4) rbase rs pequals
-  | op == 9  = run (i+2) (rbase+op1) rs p
+  | op == 1  = run (i+4) reli rs padd
+  | op == 2  = run (i+4) reli rs pmul
+  | op == 3  = run (i+2) reli readRest (pinsert (arg 1) readNext)
+  | op == 4  = rarg 1 : run (i+2) reli rs prog
+  | op == 5  = run (jumpif True)  reli rs prog
+  | op == 6  = run (jumpif False) reli rs prog
+  | op == 7  = run (i+4) reli rs pless
+  | op == 8  = run (i+4) reli rs pequals
+  | op == 9  = run (i+2) (reli + rarg 1) rs prog
   where
-    plookup k = M.lookupDefault 0 k p
-    opcode = plookup i
-    op   = opcode `mod` 100
-    mode = opcode `div` 100
-    (ms,m1) = mode `divMod` 10
-    (m3,m2) = ms `divMod` 10
+    plookup (Pos k) = M.lookupDefault 0 k prog
+    plookup (Val v) = v
+    pinsert (Pos k) param = M.insert k param prog
 
-    r1 = plookup (i+1)
-    r2 = plookup (i+2)
-    r3 = plookup (i+3)
+    opcode:parameters = map (plookup . Pos) [i..]
 
-    v1 = plookup r1
-    v2 = plookup r2
+    (modecode, op) = opcode `divMod` 100
 
-    vr1 = plookup (rbase + r1)
-    vr2 = plookup (rbase + r2)
+    modes = parseModecode modecode
 
-    p1 = case m1 of
-      0 -> r1
-      2 -> rbase + r1
-    p3 = case m3 of
-      0 -> r3
-      2 -> rbase + r3
-    op1 = case m1 of
-      0 -> v1
-      1 -> r1
-      2 -> vr1
-    op2 = case m2 of
-      0 -> v2
-      1 -> r2
-      2 -> vr2
+    args = [
+      case m of
+        0 -> Pos param
+        1 -> Val param
+        2 -> Pos (reli + param)
+      | (m, param) <- zip modes parameters
+      ]
+    arg i = args !! (i-1)
+    rarg i = plookup (arg i)
 
+    readNext:readRest = rs
 
-    padd = M.insert p3 (op1+op2) p
-    pmul = M.insert p3  (op1*op2) p
-    pless   = M.insert p3 (if op1<op2 then 1 else 0) p
-    pequals = M.insert p3 (if op1==op2 then 1 else 0) p
+    padd = pinsert (arg 3) (rarg 1 + rarg 2)
+    pmul = pinsert (arg 3) (rarg 1 * rarg 2)
+    pless   = pinsert (arg 3) (if rarg 1 < rarg 2 then 1 else 0)
+    pequals = pinsert (arg 3) (if rarg 1 == rarg 2 then 1 else 0)
 
     jumpif b
-      | b == (op1 > 0) = op2
-      | otherwise      = i+3
+      | b == (rarg 1 > 0) = rarg 2
+      | otherwise         = i+3
+
+
+parseModecode :: Integer -> [Integer]
+parseModecode modecode = unfoldr (\m -> Just . flipP $ m `divMod` 10) modecode
+  where
+    flipP (a,b) = (b,a)

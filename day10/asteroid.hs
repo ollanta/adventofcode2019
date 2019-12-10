@@ -1,8 +1,8 @@
-import Prelude as P
 import Text.Parsec
 import Data.HashMap.Strict as M
-import Data.List as L
+import Data.HashSet as S
 import Data.Ord
+import Data.List
 
 
 main :: IO ()
@@ -20,6 +20,7 @@ type Coord = (Int, Int)
 data Point = Asteroid | Free
   deriving (Show, Eq)
 
+
 readD :: String -> [[Point]]
 readD s = points
   where
@@ -30,27 +31,31 @@ readD s = points
     readC '#' = Asteroid
 
 
-toMap :: [[Point]] -> HashMap Coord Point
-toMap ps = M.fromList withCoords
+toPmap :: [[Point]] -> HashMap Coord Point
+toPmap ps = M.fromList withCoords
   where
     width = length $ head ps
     height = length ps
     withCoords = zip [(x,y) | y <- [0..height-1], x <- [0..width-1]] (concat ps)
 
 
-solve ps = maximumBy (comparing snd) . toList $ mapWithKey insight pmap
+solve ps = maximumBy (comparing snd) . M.toList $ mapInview pmap
   where
-    pmap = toMap ps
+    pmap = toPmap ps
 
-    asteroids = keys . M.filter (==Asteroid) $ pmap
 
-    insight k Free = 0
-    insight k Asteroid = length . insightFrom k $ asteroids
+mapInview :: HashMap Coord Point -> HashMap Coord Int
+mapInview pmap = mapWithKey inview pmap
+  where
+    asteroids = keysSet . M.filter (==Asteroid) $ pmap
 
-    insightFrom k coords = nub . P.map (toDx k) $ P.filter (/=k) coords
+    inview k Free     = 0
+    inview k Asteroid = inviewFrom k (S.delete k asteroids)
 
-toDx (kx,ky) (cx,cy) = (dxo,dyo)
+    inviewFrom k coords = S.size $ S.map (toDx k) coords
+
+
+toDx (kx,ky) (cx,cy) = (dx `div` g, dy `div` g)
   where
     (dx,dy) = (cx-kx, cy-ky)
     g       = gcd dx dy
-    (dxo,dyo) = (dx `div` g, dy `div` g)

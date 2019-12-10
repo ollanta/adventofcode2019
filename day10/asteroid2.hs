@@ -1,9 +1,9 @@
-import Prelude as P
 import Text.Parsec
 import Data.HashMap.Strict as M
+import Data.HashSet as S
 import Data.List as L
-import Data.Function
 import Data.Ord
+
 
 main :: IO ()
 main = do
@@ -11,7 +11,7 @@ main = do
   putStrLn ""
 
 
-showD = unlines . P.map show . zip [1..]
+showD = unlines . L.map show . zip [1..]
 
 
 type Coord = (Int, Int)
@@ -30,40 +30,45 @@ readD s = points
     readC '#' = Asteroid
 
 
-toMap ps = M.fromList withCoords
+toPmap :: [[Point]] -> HashMap Coord Point
+toPmap allPs = M.fromList withCoords
   where
-    width = length $ head ps
-    height = length ps
-    withCoords = zip [(x,y) | y <- [0..height-1], x <- [0..width-1]] (concat ps)
+    withCoords = [((x,y), point) |
+                  (y,row) <- zip [0..] allPs,
+                  (x,point) <- zip [0..] row]
 
 
-laserCoord = (19,11)
---laserCoord = (11,13)
-
-solve ps = killAsteroids laserCoord (M.delete laserCoord pmap)
+solve ps = killAsteroids laserCoord (S.delete laserCoord asteroids)
   where
-    pmap = toMap ps
+    pmap = toPmap ps
+    (laserCoord, _) = maximumBy (comparing snd) . M.toList $ mapInview pmap
+    asteroids = keysSet . M.filter (==Asteroid) $ pmap
 
 
-killAsteroids :: Coord -> HashMap Coord Point -> [Coord]
-killAsteroids k pmap
-  | M.null pmap  = []
-  | otherwise = orderedAsteroids ++ killAsteroids k pmap'
+killAsteroids :: Coord -> HashSet Coord -> [Coord]
+killAsteroids k asteroids
+  | S.null asteroids = []
+  | otherwise        = orderedAsteroids ++ killAsteroids k asteroids'
   where
-    asteroids = keys . M.filter (==Asteroid) $ pmap
+    asteroids' = S.difference asteroids (S.fromList orderedAsteroids)
 
-    pmap' = L.foldr (\c m -> M.delete c m) pmap orderedAsteroids
+    byDirection :: HashMap Coord Coord
+    byDirection = M.fromListWith chooseC . L.map (\c -> (toDx k c, c)) . S.toList $ asteroids
 
-    directions :: [(Coord,Coord)]
-    directions = nubBy ((==) `on` fst) . sortBy (comparing (toDist . snd)) . P.map (\c -> (toDx k c, c)) $ asteroids
-    orderedDirections = sortBy (comparing (angle . fst)) directions
+    chooseC a b
+      | dist a k < dist b k = a
+      | otherwise           = b
 
-    (kx,ky) = k
-    toDist (cx,cy) = (cx-kx)*(cx-kx) + (cy-ky)*(cy-ky)
+    orderedDirections = sortBy (comparing (angle . fst)) . M.toList $ byDirection
 
-    orderedAsteroids = P.map snd orderedDirections
+    orderedAsteroids = L.map snd orderedDirections
 
 
+dist :: Coord -> Coord -> Int
+dist (ax,ay) (bx,by) = (ax-bx)^2 + (ay-by)^2
+
+
+angle :: Coord -> Double
 angle (dx,dy)
   | ang < 0 = 2*pi + ang
   | otherwise = ang
@@ -71,6 +76,17 @@ angle (dx,dy)
     fx = fromIntegral dx
     fy = fromIntegral dy
     ang = atan2 fx (-fy)
+
+
+mapInview :: HashMap Coord Point -> HashMap Coord Int
+mapInview pmap = mapWithKey inview pmap
+  where
+    asteroids = keysSet . M.filter (==Asteroid) $ pmap
+
+    inview k Free     = 0
+    inview k Asteroid = inviewFrom k (S.delete k asteroids)
+
+    inviewFrom k coords = S.size $ S.map (toDx k) coords
 
 
 toDx :: Coord -> Coord -> Coord

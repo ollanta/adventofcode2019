@@ -32,47 +32,32 @@ split (x1:x2:xs) = let (xr1,xr2) = split xs in (x1:xr1, x2:xr2)
 split [] = ([],[])
   
 
-turnd (0,1) 0 = (-1,0)
-turnd (-1,0) 0 = (0,-1)
-turnd (0,-1) 0 = (1,0)
-turnd (1,0) 0 = (0,1)
-
-turnd (0,1) 1 = (1,0)
-turnd (1,0) 1 = (0,-1)
-turnd (0,-1) 1 = (-1,0)
-turnd (-1,0) 1 = (0,1)
+turn :: Coord -> Integer -> Coord
+turn (x,y) 0 = (-y,x)
+turn (x,y) 1 = (y,-x)
 
 
-turn :: Coord -> [Integer] -> [Coord]
-turn dir (dc:dcs) = newdir : turn newdir dcs
-  where
-    newdir = turnd dir dc
-turn dir [] = []
+move :: Coord -> Coord -> Coord
+move (x,y) (dx,dy) = (x+dx, y+dy)
 
 
-move :: Coord -> [Coord] -> [Coord]
-move pos@(x,y) (d@(dx,dy):ds) = newpos:move newpos ds
-  where
-    newpos = (x+dx, y+dy)
-move _ [] = []
-
-
---solve :: [Integer] -> [[Integer]]
+solve :: [Integer] -> Int
 solve list = M.size (last maps)
   where
-    outputs = run (Computer 0 0 inputs program)
     program = toProgram list
 
-    (paint, dirchange) = split outputs 
-    directions = turn (0,1) dirchange
+    outputs = run (Computer 0 0 inputs program)
 
-    currentcoord = (0,0):move (0,0) directions
+    (paints, turns) = split outputs 
+    directions = drop 1 $ scanl turn (0,1) turns
 
-    instructions = zip currentcoord paint
+    coords = scanl move (0,0) directions
+
+    instructions = zip coords paints
 
     maps = scanl (\m (c,p) -> M.insert c p m) M.empty instructions
 
-    inputs = zipWith (\m c -> M.lookupDefault 0 c m) maps currentcoord
+    inputs = zipWith (M.lookupDefault 0) coords maps
 
 
 data Computer = Computer {

@@ -1,8 +1,6 @@
 import Text.Parsec
 import Data.List as L
-import Data.HashSet as S
-import Data.HashMap.Strict as M
-import Data.Ord
+import qualified Data.HashMap.Strict as M
 
 
 main :: IO ()
@@ -11,16 +9,11 @@ main = do
   putStrLn ""
 
 
-
-
-energy moons = sum (L.map energy1 moons)
-  where
-    energy1 (Moon (a,b,c) (d,e,f)) = sum (L.map abs [a,b,c]) * sum (L.map abs [d,e,f])
-
-
 type Coord = (Int, Int, Int)
 
-addc (x1,y1,z1) (x2,y2,z2) = (x1+x2,y1+y2,z1+z2)
+addc = pairwise (+)
+
+pairwise f (x1,y1,z1) (x2,y2,z2) = (f x1 x2, f y1 y2, f z1 z2)
 
 
 readD :: String -> [Coord]
@@ -43,47 +36,48 @@ readM = do
 data Moon = Moon{pos:: Coord, vel::Coord}
   deriving (Eq, Show)
 
-takeWhileIncreasing (a:rest@(b:_))
-  | b > a = a : rest
-  | otherwise = [a]
+xstate (Moon (x,_,_) (vx,_,_)) = (x,vx)
+ystate (Moon (_,y,_) (_,vy,_)) = (y,vy)
+zstate (Moon (_,_,z) (_,_,vz)) = (z,vz)
 
 
---solve :: [Coord] -> Int
-solve positions = lcm (lcm (xloopend-xloopstart) (yloopend-yloopstart)) (zloopend-zloopstart)
+solve :: [Coord] -> Integer
+solve positions = maximum starts + foldr1 lcm loopsizes
   where
-    xstate (Moon (x,_,_) (vx,_,_)) = (x,vx)
-    ystate (Moon (_,y,_) (_,vy,_)) = (y,vy)
-    zstate (Moon (_,_,z) (_,_,vz)) = (z,vz)
+    initMoons = [Moon{pos=pos, vel=(0,0,0)} |  pos <- positions]
 
-    xmoonstates = [(as,bs,cs,ds) | l <- moonstates, let (as:bs:cs:ds:_) = L.map xstate l]
-    ymoonstates = [(as,bs,cs,ds) | l <- moonstates, let (as:bs:cs:ds:_) = L.map ystate l]
-    zmoonstates = [(as,bs,cs,ds) | l <- moonstates, let (as:bs:cs:ds:_) = L.map zstate l]
+    moonstates = iterate orbitMoons initMoons
 
-    (xloopstart, xloopend) = findRepeats xmoonstates
-    (yloopstart, yloopend) = findRepeats ymoonstates
-    (zloopstart, zloopend) = findRepeats zmoonstates
+    --xmoonstates = map (map xstate) moonstates
+    splitstates = [map (map dimstate) moonstates
+                  | dimstate <- [xstate, ystate, zstate]]
 
-    initmoons = [Moon{pos=pos, vel=(0,0,0)} |  pos <- positions]
+    (starts, ends) = unzip $ map findRepeats splitstates
 
-    moonstates = iterate updateState initmoons
+    loopsizes = zipWith (-) ends starts
 
-    updateState allMoons = L.map (updateOneState allMoons) allMoons
 
-    updateOneState allMoons moon = Moon{pos=addc (pos moon) vel', vel=vel'}
+orbitMoons :: [Moon] -> [Moon]
+orbitMoons moons = map orbitMoon moons
+  where
+    orbitMoon moon@Moon{pos=mpos, vel=mvel} = Moon{pos=addc mpos vel', vel=vel'}
       where
-        otherMoons = L.filter (/=moon) allMoons
-        gravities = L.map (gravity moon) otherMoons
-        gravity Moon{pos=(x1,y1,z1)} Moon{pos=(x2,y2,z2)} = (gravity1 x1 x2, gravity1 y1 y2, gravity1 z1 z2)
-        gravity1 c1 c2
-          | c1 == c2 = 0
-          | c1 <  c2 = 1
-          | c1 >  c2 = -1
+        gravities = map (gravity moon) moons
         sumgravities = foldr1 addc gravities
-        vel' = addc (vel moon) sumgravities
+        vel' = addc mvel sumgravities
 
 
-findRepeats ps = helper 0 M.empty ps
+gravity :: Moon -> Moon -> Coord
+gravity Moon{pos=thisPos} Moon{pos=otherPos} = pairwise gravity1 thisPos otherPos
   where
-    helper i m (p:ps)
-      | M.member p m = (m M.! p, i)
-      | otherwise    = helper (i+1) (M.insert p i m) ps
+    gravity1 c1 c2
+      | c1 == c2 = 0
+      | c1 <  c2 = 1
+      | c1 >  c2 = -1
+
+
+findRepeats states = helper 0 M.empty states
+  where
+    helper i m (s:rest)
+      | M.member s m = (m M.! s, i)
+      | otherwise    = helper (i+1) (M.insert s i m) rest

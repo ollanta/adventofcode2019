@@ -1,7 +1,5 @@
 import Text.Parsec
 import Data.List as L
-import Data.HashSet as S
-import Data.Ord
 
 
 main :: IO ()
@@ -13,7 +11,9 @@ main = do
 showD states = unlines . take 1001 $ shownStates
   where
     shownStates = zipWith showiState [0..] states
-    showiState i state = unlines ["Step " ++ show i, unlines (L.map show state), show (energy state)]
+    showiState i state = unlines ["Step " ++ show i,
+                                  unlines (map show state),
+                                  "Energy: " ++ show (energy state)]
 
 
 energy moons = sum (map energy1 moons)
@@ -23,7 +23,9 @@ energy moons = sum (map energy1 moons)
 
 type Coord = (Int, Int, Int)
 
-addc (x1,y1,z1) (x2,y2,z2) = (x1+x2,y1+y2,z1+z2)
+addc = pairwise (+)
+
+pairwise f (x1,y1,z1) (x2,y2,z2) = (f x1 x2, f y1 y2, f z1 z2)
 
 
 readD :: String -> [Coord]
@@ -47,22 +49,28 @@ data Moon = Moon{pos:: Coord, vel::Coord}
   deriving (Eq, Show)
 
 
+solve :: [Coord] -> [[Moon]]
 solve positions = moonstates
   where
-    moons = [Moon{pos=pos, vel=(0,0,0)} |  pos <- positions]
+    initMoons = [Moon{pos=pos, vel=(0,0,0)} |  pos <- positions]
 
-    moonstates = iterate updateState moons
+    moonstates = iterate orbitMoons initMoons
 
-    updateState allMoons = map (updateOneState allMoons) allMoons
 
-    updateOneState allMoons moon = Moon{pos=addc (pos moon) vel', vel=vel'}
+orbitMoons :: [Moon] -> [Moon]
+orbitMoons moons = map orbitMoon moons
+  where
+    orbitMoon moon@Moon{pos=mpos, vel=mvel} = Moon{pos=addc mpos vel', vel=vel'}
       where
-        otherMoons = filter (/=moon) allMoons
-        gravities = map (gravity moon) otherMoons
-        gravity Moon{pos=(x1,y1,z1)} Moon{pos=(x2,y2,z2)} = (gravity1 x1 x2, gravity1 y1 y2, gravity1 z1 z2)
-        gravity1 c1 c2
-          | c1 == c2 = 0
-          | c1 <  c2 = 1
-          | c1 >  c2 = -1
+        gravities = map (gravity moon) moons
         sumgravities = foldr1 addc gravities
-        vel' = addc (vel moon) sumgravities
+        vel' = addc mvel sumgravities
+
+
+gravity :: Moon -> Moon -> Coord
+gravity Moon{pos=thisPos} Moon{pos=otherPos} = pairwise gravity1 thisPos otherPos
+  where
+    gravity1 c1 c2
+      | c1 == c2 = 0
+      | c1 <  c2 = 1
+      | c1 >  c2 = -1

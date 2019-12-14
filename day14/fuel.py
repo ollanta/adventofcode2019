@@ -1,0 +1,46 @@
+import numpy as np
+
+
+with open("input.txt") as file:
+    lines = file.read().splitlines()
+
+fromTos = [tuple(part.split(', ') for part in line.split(' => '))
+          for line in lines]
+
+def read(s):
+    [i,t] = s.split(' ')
+    return (t,int(i))
+
+batchsizeMap = {'ORE': 1}
+recipeMap = {'ORE': {'ORE':1}}
+for (reqs, [res]) in fromTos:
+    (t,i) = read(res)
+    batchsizeMap[t] = i
+    recipeMap[t] = dict(read(req) for req in reqs)
+
+# ^ IO v NP
+
+types = list(recipeMap.keys())
+
+batchsize = np.array([[batchsizeMap[t]] for t in types], dtype=int)
+transmission = np.array([[recipeMap[colt].get(rowt,0) for colt in types] for rowt in types], dtype=int)
+
+idfor = lambda t: np.array([[1 if ot == t else 0] for ot in types], dtype=int)
+
+need = idfor("FUEL")
+have = np.zeros(need.shape, dtype=int)
+while True:
+    need_met = np.min(np.concatenate([need, have], axis=1), axis=1, keepdims=True)
+    have -= need_met
+    need -= need_met
+    
+    batched_need = (need + batchsize - 1) // batchsize
+    new_need = np.dot(transmission, batched_need)
+    new_have = have + batched_need * batchsize - need
+
+    (need, have) = (new_need, new_have)
+    
+    if (np.sum(idfor("ORE") * need) == np.sum(need)):
+        break
+
+print (np.sum(need))

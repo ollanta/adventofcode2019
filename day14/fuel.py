@@ -4,26 +4,26 @@ import numpy as np
 with open("input.txt") as file:
     lines = file.read().splitlines()
 
-fromTos = [tuple(part.split(', ') for part in line.split(' => '))
+from_tos = [tuple(part.split(', ') for part in line.split(' => '))
           for line in lines]
 
 def read(s):
     [i,t] = s.split(' ')
     return (t,int(i))
 
-batchsizeMap = {'ORE': 1}
-recipeMap = {'ORE': {'ORE':1}}
-for (reqs, [res]) in fromTos:
+batchsize_map = {'ORE': 1}
+recipe_map = {'ORE': {'ORE':1}}
+for (reqs, [res]) in from_tos:
     (t,i) = read(res)
-    batchsizeMap[t] = i
-    recipeMap[t] = dict(read(req) for req in reqs)
+    batchsize_map[t] = i
+    recipe_map[t] = dict(read(req) for req in reqs)
 
 # ^ IO v NP
 
-types = list(recipeMap.keys())
+types = list(recipe_map.keys())
 
-batchsize = np.array([[batchsizeMap[t]] for t in types], dtype=int)
-transmission = np.array([[recipeMap[colt].get(rowt,0) for colt in types] for rowt in types], dtype=int)
+batchsize = np.array([[batchsize_map[t]] for t in types], dtype=int)
+transmission = np.array([[recipe_map[colt].get(rowt,0) for colt in types] for rowt in types], dtype=int)
 
 idfor = lambda t: np.array([[1 if ot == t else 0] for ot in types], dtype=int)
 

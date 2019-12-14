@@ -3,3 +3,5 @@
 day*/*
 !day*/*.hs
 !day*/*.txt
+!day*/*.py
+.stack-work

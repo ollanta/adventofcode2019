@@ -4,6 +4,7 @@ import qualified Data.HashMap.Strict as M
 import Data.Ord
 import Data.Function
 import Intcode
+import Helpers
 
 main :: IO ()
 main = do
@@ -94,24 +95,16 @@ type Coord = (Integer, Integer)
 
 addc (x1,y1) (x2,y2) = (x1+x2,y1+y2)
 
-data Obj = Open | Wall | Oxygen | Bot | Unknown | Origin
+data Obj = Open | Wall | Oxygen | Bot | Origin
   deriving (Eq)
 
-
 draw :: M.HashMap Coord Obj -> String
-draw pmap = unlines showMap
+draw objmap = drawMap draw1 objmap'
   where
-    sx = minimum . map fst . M.keys $ pmap
-    ex = maximum . map fst . M.keys $ pmap
-    sy = minimum . map snd . M.keys $ pmap
-    ey = maximum . map snd . M.keys $ pmap
-    draw Open = '.'
-    draw Wall = '#'
-    draw Oxygen = 'o'
-    draw Bot = 'B'
-    draw Unknown = ' '
-    draw Origin = 'X'
+    objmap' = M.insert (0,0) Origin objmap
 
-    pmap' = M.insert  (0,0) Origin pmap
-
-    showMap = [[draw (M.lookupDefault Unknown (x,y) pmap') | x <- [sx..ex]] | y <- [sy..ey]]
+    draw1 Open = '.'
+    draw1 Wall = '#'
+    draw1 Oxygen = 'o'
+    draw1 Bot = 'B'
+    draw1 Origin = 'X'

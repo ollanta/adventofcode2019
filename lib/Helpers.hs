@@ -1,7 +1,11 @@
 module Helpers
     ( takeEvery
     , ceilDiv
+    , drawMap
     ) where
+
+import qualified Data.HashMap.Strict as M
+
 
 -- return every n elements of a list, but also include the last two elements
 takeEvery _ [] = []
@@ -15,3 +19,15 @@ takeEvery n l = p1 ++ takeEvery n p2
 
 -- return a `div` b rounded up
 ceilDiv a b = (a + b - 1) `div` b
+
+
+-- transform a coordinatemap to a multiline string
+drawMap draw1 m = unlines rows
+  where
+    sx = minimum . map fst . M.keys $ m
+    ex = maximum . map fst . M.keys $ m
+    sy = minimum . map snd . M.keys $ m
+    ey = maximum . map snd . M.keys $ m
+
+    charMap = M.map draw1 m
+    rows = [[M.lookupDefault ' ' (x,y) charMap | x <- [sx..ex]] | y <- [sy..ey]]

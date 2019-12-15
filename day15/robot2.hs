@@ -16,12 +16,16 @@ showD = unlines
 solve list = [show  . length $ filled,
               draw . last $ filled]
   where
-    filling = iterate fillWithOxygen almostFinalMap
+    filling = iterate fillWithOxygen finalMap
     filled = takeWhile (not . M.null . M.filter (==Open)) filling
     
-    [oxygenPos] = M.keys $ M.filter (==Oxygen) almostFinalMap
+    [oxygenPos] = M.keys $ M.filter (==Oxygen) finalMap
 
-    almostFinalMap = mapsP !! 10000
+    findFinal 5 (l:ls)     = l
+    findFinal n (l@(c,_,_):ls)
+      | c == (0,0) = findFinal (n+1) ls
+      | otherwise  = findFinal n ls
+    (_, finalMap, finalSP) = findFinal 0 (zip3 coords maps smallPaths)
 
     program = toProgram list
 

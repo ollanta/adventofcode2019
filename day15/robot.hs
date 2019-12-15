@@ -13,18 +13,21 @@ main = do
 showD = unlines
 
 
-solve list = [show . length $ almostFinalSP M.! oxygenPos,
-              draw almostFinalMap]
+solve list = [show . length $ finalSP M.! oxygenPos,
+              draw finalMap]
   where
-    [oxygenPos] = M.keys $ M.filter (==Oxygen) almostFinalMap
-    almostFinalSP = smallPaths !! 10000
+    [oxygenPos] = M.keys $ M.filter (==Oxygen) finalMap
 
-    almostFinalMap = mapsP !! 10000
+    findFinal 5 (l:ls)     = l
+    findFinal n (l@(c,_,_):ls)
+      | c == (0,0) = findFinal (n+1) ls
+      | otherwise  = findFinal n ls
+    (_, finalMap, finalSP) = findFinal 0 (zip3 coords maps smallPaths)
 
     program = toProgram list
 
     initCoord = (0,0)
-    initMap = M.fromList [(initCoord,Open)]
+    initMap = M.singleton initCoord Open
 
     outputs = run (Computer 0 0 inputs program)
 
@@ -35,9 +38,8 @@ solve list = [show . length $ almostFinalSP M.! oxygenPos,
     newinfo = zipWith3 toInfo coords inputs outputs
 
     maps = scanl (\m (c,o) -> M.insert c o m) initMap newinfo
-    mapsP = zipWith (\c m -> M.insert c Bot m) coords maps
 
-    initSmallPath = M.fromList [(initCoord,[])]
+    initSmallPath = M.singleton initCoord []
     smallPaths = scanl (\m (inp,oc,c) -> updateSmallPath m inp oc c) initSmallPath (zip3 inputs coords (drop 1 coords))
 
     inputs :: [Integer]

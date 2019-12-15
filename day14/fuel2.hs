@@ -1,6 +1,7 @@
 import Text.Parsec
 import Data.List as L
 import qualified Data.HashMap.Strict as M
+import Helpers
 
 
 main :: IO ()
@@ -57,13 +58,14 @@ solve deps = search 0 1000000000000
     calcCost n = snd $ costOf depmap n "FUEL" M.empty
     depmap = M.fromList $ map (\(req,(n, t)) -> (t,(n,req))) deps
 
+
 costOf :: M.HashMap String (Integer, [(Integer,String)]) -> Integer -> String -> M.HashMap String Integer -> (M.HashMap String Integer, Integer)
 costOf depmap n "ORE" m = (m, fromInteger n)
 costOf depmap n s m     = (m''', cost)
   where
     (dn, reqs) = depmap M.! s
 
-    multiplier = ceiling (fromInteger n/ fromInteger dn)
+    multiplier = ceilDiv n dn
     rest       = multiplier*dn - n
 
     mreqs = map (\(n,t) -> (multiplier*n, t)) reqs
@@ -72,6 +74,7 @@ costOf depmap n s m     = (m''', cost)
     (m'', cost) = includereq depmap 0 m' reducedreqs
 
     m''' = M.insert s rest m''
+
 
 includereq :: M.HashMap String (Integer, [(Integer,String)]) -> Integer -> M.HashMap String Integer -> [Req] -> (M.HashMap String Integer, Integer)
 includereq depmap acc m [] = (m, acc)

@@ -1,6 +1,7 @@
 import Text.Parsec
 import Data.List as L
 import qualified Data.HashMap.Strict as M
+import Helpers
 
 
 main :: IO ()
@@ -46,7 +47,7 @@ costOf depmap n s m     = (m''', cost)
   where
     (dn, reqs) = depmap M.! s
 
-    multiplier = ceiling (fromInteger n/ fromInteger dn)
+    multiplier = ceilDiv n dn
     rest       = multiplier*dn - n
 
     mreqs = map (\(n,t) -> (multiplier*n, t)) reqs

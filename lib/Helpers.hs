@@ -1,5 +1,6 @@
 module Helpers
     ( takeEvery
+    , lastN
     , ceilDiv
     , drawMap
     ) where
@@ -15,6 +16,13 @@ takeEvery n l = p1 ++ takeEvery n p2
     helper 1 (l:ls) = ([l],ls)
     helper n (l:ls@(a:b:_)) = helper (n-1) ls
     helper _ ls = (ls,[])
+
+
+-- return the last N entries of a list
+lastN i ls = lastN' ls []
+  where
+    lastN' [] acc = reverse acc
+    lastN' (l:ls) acc = lastN' ls (take i $ l:acc)
 
 
 -- return a `div` b rounded up

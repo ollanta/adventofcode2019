@@ -1,5 +1,6 @@
 module Intcode
   ( Computer
+  , Program
   , initComputer
   , run
   , readProgram

@@ -34,19 +34,13 @@ readD s = parse (readReq `endBy` newline) "" s
 
 showD = unlines . map show
 
-takeevery _ [] = []
-takeevery n l = p1 ++ takeevery n p2
-  where
-    (p1,p2) = helper n l
-    helper 1 (l:ls) = ([l],ls)
-    helper n (l:ls@(a:b:_)) = helper (n-1) ls
-    helper _ ls = (ls,[])
-
 
 solve :: [Dependency] -> [(Integer, Integer)]
-solve deps = search 0 1000000000000
+solve deps = search minFuel maxFuel
   where
     maxCost = 1000000000000
+    minFuel = div maxCost (calcCost 1)
+    maxFuel = head . dropWhile ((<maxCost) . calcCost) $ [m*minFuel | m <- [2,4..]]
 
     search min max
       | min == max-1 = [(min,max)]

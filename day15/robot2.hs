@@ -3,18 +3,19 @@ import Data.List as L
 import qualified Data.HashMap.Strict as M
 import Data.Ord
 import Data.Function
+import Intcode
 
 main :: IO ()
 main = do
   s <- readFile "input.txt"
-  putStrLn (showD . solve $ readD s)
+  putStrLn (showD . solve . readProgram $ s)
 
 
 showD = unlines
 
 
-solve list = [show  . length $ filled,
-              draw . last $ filled]
+solve program = [show  . length $ filled,
+                 draw . last $ filled]
   where
     filling = iterate fillWithOxygen finalMap
     filled = takeWhile (not . M.null . M.filter (==Open)) filling
@@ -27,12 +28,10 @@ solve list = [show  . length $ filled,
       | otherwise  = findFinal n ls
     (_, finalMap, finalSP) = findFinal 0 (zip3 coords maps smallPaths)
 
-    program = toProgram list
-
     initCoord = (0,0)
     initMap = M.fromList [(initCoord,Open)]
 
-    outputs = run (Computer 0 0 inputs program)
+    outputs = run $ initComputer program inputs
 
     moves = zipWith toMove inputs outputs
 
@@ -137,71 +136,3 @@ draw pmap = unlines showMap
     pmap' = M.insert  (0,0) Origin pmap
 
     showMap = [[draw (M.lookupDefault Unknown (x,y) pmap') | x <- [sx..ex]] | y <- [sy..ey]]
-
-
-toProgram ::[Integer] -> M.HashMap Integer Integer
-toProgram list = program
-  where
-    program = M.fromList $ zip [0..] list
-
-
-data Computer = Computer {
-  pointer :: Integer,
-  relPointer :: Integer,
-  inputs :: [Integer],
-  program :: M.HashMap Integer Integer
-}
-
-
-data Param = Pos !Integer | Val !Integer
-
-
-run :: Computer -> [Integer]
-run c@Computer{pointer=i, relPointer=reli, inputs=rs, program=prog}
-  | op == 99 = []
-  | op == 1  = run c{pointer=i+4, program=padd}
-  | op == 2  = run c{pointer=i+4, program=pmul}
-  | op == 3  = run c{pointer=i+2, inputs=readRest, program=pinsert (arg 1) readNext}
-  | op == 4  = rarg 1 : run c{pointer=i+2}
-  | op == 5  = run c{pointer=jumpif True}
-  | op == 6  = run c{pointer=jumpif False}
-  | op == 7  = run c{pointer=i+4, program=pless}
-  | op == 8  = run c{pointer=i+4, program=pequals}
-  | op == 9  = run c{pointer=i+2, relPointer=reli + rarg 1}
-  where
-    plookup (Pos k) = M.lookupDefault 0 k prog
-    plookup (Val v) = v
-    pinsert (Pos k) param = M.insert k param prog
-
-    opcode:parameters = map (plookup . Pos) [i..]
-
-    (modecode, op) = opcode `divMod` 100
-
-    modes = parseModecode modecode
-
-    args = [
-      case m of
-        0 -> Pos param
-        1 -> Val param
-        2 -> Pos (reli + param)
-      | (m, param) <- zip modes parameters
-      ]
-    arg i = args !! (i-1)
-    rarg i = plookup (arg i)
-
-    readNext:readRest = rs
-
-    padd = pinsert (arg 3) (rarg 1 + rarg 2)
-    pmul = pinsert (arg 3) (rarg 1 * rarg 2)
-    pless   = pinsert (arg 3) (if rarg 1 < rarg 2 then 1 else 0)
-    pequals = pinsert (arg 3) (if rarg 1 == rarg 2 then 1 else 0)
-
-    jumpif b
-      | b == (rarg 1 > 0) = rarg 2
-      | otherwise         = i+3
-
-
-parseModecode :: Integer -> [Integer]
-parseModecode modecode = unfoldr (\m -> Just . flipP $ m `divMod` 10) modecode
-  where
-    flipP (a,b) = (b,a)

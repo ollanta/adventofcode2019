@@ -23,10 +23,10 @@ showD = unlines . map (concatMap show)
 
 solve :: [Int] -> [[Int]]
 solve inps = [gen 0 msgoffset
-             --, gen 1 msgoffset
-             --, gen 100 msgoffset
-             , gen 1 0
-             , gen 100 0
+             , gen 1 msgoffset
+             , gen 100 msgoffset
+             --, gen 1 0
+             --, gen 100 0
              ]
   where
     msgoffset :: Int
@@ -43,7 +43,7 @@ solve inps = [gen 0 msgoffset
     gen' n mo vals = gen' (n-1) mo (V.force vals')
       where
         psums = V.scanr1' (+) vals
-        vals' = V.imap (\o _ -> calcDig mo psums (pattfor (mo+o))) psums
+        vals' = V.imap (\o _ -> calcDig mo psums (pattfor (mo+o))) vals
 
     calcDig mo psums patt = abs . (`rem`10) . sum . map (\(m,o) -> m * psums V.! (o-mo)) $ patt
 

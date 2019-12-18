@@ -44,28 +44,72 @@ isKey (Key _) = True
 isKey _ = False
 
 
-neighbors (x,y) = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
+update4t 1 v (_,t2,t3,t4) = (v ,t2,t3,t4)
+update4t 2 v (t1,_,t3,t4) = (t1,v ,t3,t4)
+update4t 3 v (t1,t2,_,t4) = (t1,t2,v ,t4)
+update4t 4 v (t1,t2,t3,_) = (t1,t2,t3,v )
+
+listTo4t [a,b,c,d] = (a,b,c,d)
+
+t4toList (a,b,c,d) = [a,b,c,d]
 
 
 solve omap = result
   where
     starts = M.toList . M.filter (==Start 0) $ omap
     starts' = zipWith (\i (c,s) -> (c ,Start i)) [1..] $ starts
-    omap' = M.union (M.fromList starts') omap
     keys = M.toList . M.filter isKey $ omap
     doors = M.toList . M.filter isDoor $ omap
 
     -- generate graph of distances between interesting points
     allItems = starts' ++ keys ++ doors
-    distances :: M.HashMap Coord [(Obj, Coord, Integer)]
-    distances = M.fromList [(ac, [(b,bc, fromJust dist) |
-                                  (bc,b) <- allItems,
-                                  a /= b,
-                                  let dist = bfsFromTo ac bc,
-                                  dist /= Nothing
-                                  ])
-                           | (ac,a) <- allItems]
+    distances = getDistanceMap omap allItems
 
+    -- search for a final state from starts
+    startst = listTo4t $ map fst starts'
+    result = search S.empty (H.singleton (0, (startst, S.empty)))
+
+    nkeys = length keys
+
+    search :: S.HashSet SetKey -> H.MinPrioHeap Integer (Coord4T, CharSet) -> Maybe Integer
+    search seen heap
+      | H.isEmpty heap       = Nothing
+      | length keys == nkeys = Just d
+      | otherwise            = search seen' heap''
+      where
+        Just ((d, state), heap') = H.view heap
+        (coordst, keys) = state
+
+        stateupdates = concatMap (\(i,c) -> zip (repeat i) (genstates c keys)) $ zip [1..] (t4toList coordst)
+        newostates = [(d+d', (update4t i c' coordst, keys')) |
+                      (i, (d', c', keys')) <- stateupdates]
+
+        newostates' = filter (\(_,st) -> not $ S.member st seen) $ newostates
+        seen' = foldl' (\s (_,st) -> S.insert st s) seen newostates'
+
+        heap'' = H.union heap' (H.fromList newostates')
+
+    genstates c keys = [(d, c', keys') |
+                        (no, c', d) <- M.lookupDefault [] c distances,
+                        isOk no keys,
+                        let keys' = updateKeys no keys]
+
+    isOk (Door c) keys = S.member (toLower c) keys
+    isOk (Key c) keys  = not $ S.member c keys
+    isOk (Start _) _   = False
+
+    updateKeys (Key c) keys = S.insert c keys
+    updateKeys _ keys = keys
+
+
+getDistanceMap :: M.HashMap Coord Obj -> [(Coord, Obj)] -> M.HashMap Coord [(Obj, Coord, Integer)]
+getDistanceMap omap items = M.fromList [(ac, [(b, bc, fromJust dist) |
+                                              (bc,b) <- items,
+                                              a /= b,
+                                              let dist = bfsFromTo ac bc,
+                                                  dist /= Nothing])
+                                       | (ac,a) <- items]
+  where
     bfsFromTo from to = bfs to 0 (S.singleton from) [from] S.empty
 
     bfs :: Coord -> Integer -> S.HashSet Coord -> [Coord] -> S.HashSet Coord -> Maybe Integer
@@ -88,53 +132,4 @@ solve omap = result
           Door _ -> Nothing
           _    -> Just c
 
-
-    [s1,s2,s3,s4] = map fst starts'
-    startst = (s1,s2,s3,s4)
-    result = search S.empty (H.singleton (0, (startst, S.empty)))
-
-    nkeys = length keys
-
-    --search :: [(Integer, (Coord4T, S.HashSet Char))] -> Maybe Integer
-    --search seen ((d, ((s1, s2, s3, s4), keys)):next)
-    search :: S.HashSet SetKey -> H.MinPrioHeap Integer (Coord4T, CharSet) -> Maybe Integer
-    search seen heap
-      | H.isEmpty heap       = Nothing
-      | length keys == nkeys = Just d
-      | otherwise            = search seen' heap''
-      where
-        Just (item, heap') = H.view heap
-        (d, ((s1, s2, s3, s4), keys)) = item
-
-        newstates1 = [(d+d', ((nc, s2, s3, s4), keys')) |
-                      let nss = M.lookupDefault [] s1 distances,
-                      (no, nc, d') <- nss,
-                      isOk no keys,
-                      let keys' = updateKeys no keys]
-        newstates2 = [(d+d', ((s1, nc, s3, s4), keys')) |
-                      let nss = M.lookupDefault [] s2 distances,
-                      (no, nc, d') <- nss,
-                      isOk no keys,
-                      let keys' = updateKeys no keys]
-        newstates3 = [(d+d', ((s1, s2, nc, s4), keys')) |
-                      let nss = M.lookupDefault [] s3 distances,
-                      (no, nc, d') <- nss,
-                      isOk no keys,
-                      let keys' = updateKeys no keys]
-        newstates4 = [(d+d', ((s1, s2, s3, nc), keys')) |
-                      let nss = M.lookupDefault [] s4 distances,
-                      (no, nc, d') <- nss,
-                      isOk no keys,
-                      let keys' = updateKeys no keys]
-
-        newostates = filter (\(_,st) -> not $ S.member st seen) $ newstates1 ++ newstates2 ++ newstates3 ++ newstates4
-        seen' = foldl' (\s (_,st) -> S.insert st s) seen newostates
-
-        heap'' = H.union heap' (H.fromList newostates)
-
-    isOk (Door c) keys = S.member (toLower c) keys
-    isOk (Key c) keys  = not $ S.member c keys
-    isOk (Start _) _   = False
-
-    updateKeys (Key c) keys = S.insert c keys
-    updateKeys _ keys = keys
+neighbors (x,y) = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]

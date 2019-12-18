@@ -66,26 +66,31 @@ solve omap = result
     distances = getDistanceMap omap allItems
 
     -- search for a final state from starts
-    startst = listTo4t $ map fst starts'
-    result = search S.empty (H.singleton (0, (startst, S.empty)))
+    start4t = listTo4t $ map fst starts'
+    startstate = (start4t, S.empty)
+    result = search (M.singleton startstate 0) (H.singleton (0, startstate))
 
     nkeys = length keys
 
-    search :: S.HashSet SetKey -> H.MinPrioHeap Integer (Coord4T, CharSet) -> Maybe Integer
+    search :: M.HashMap SetKey Integer -> H.MinPrioHeap Integer (Coord4T, CharSet) -> Maybe Integer
     search seen heap
       | H.isEmpty heap       = Nothing
       | length keys == nkeys = Just d
+      | seenBetter d state   = search seen heap'
       | otherwise            = search seen' heap''
       where
         Just ((d, state), heap') = H.view heap
         (coordst, keys) = state
 
+        seenBetter dst st = dst > M.lookupDefault dst st seen
+        betterThanSeen dst st = dst < M.lookupDefault (dst+1) st seen
+
         stateupdates = concatMap (\(i,c) -> zip (repeat i) (genstates c keys)) $ zip [1..] (t4toList coordst)
         newostates = [(d+d', (update4t i c' coordst, keys')) |
                       (i, (d', c', keys')) <- stateupdates]
 
-        newostates' = filter (\(_,st) -> not $ S.member st seen) $ newostates
-        seen' = foldl' (\s (_,st) -> S.insert st s) seen newostates'
+        newostates' = filter (\(d,st) -> betterThanSeen d st) $ newostates
+        seen' = foldl' (\s (d,st) -> M.insertWith min st d s) seen newostates'
 
         heap'' = H.union heap' (H.fromList newostates')
 

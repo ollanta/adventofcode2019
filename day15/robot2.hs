@@ -32,7 +32,7 @@ solve program = [show  . length $ filled,
     initCoord = (0,0)
     initMap = M.fromList [(initCoord,Open)]
 
-    outputs = run $ initComputer program inputs
+    outputs = run (initComputer program) inputs
 
     moves = zipWith toMove inputs outputs
 

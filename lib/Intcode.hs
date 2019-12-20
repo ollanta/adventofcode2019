@@ -45,11 +45,13 @@ initComputer program = Computer 0 0 program
 
 
 run :: Computer -> [Integer] -> [Integer]
-run c inputs = run' (Paused c) inputs
+run c inputs = run' started inputs
   where
+    started = runCont c Nothing -- start, in case no input is needed
+
     run' :: CompCont -> [Integer] -> [Integer]
     run' Halted _ = []
-    run' (Output i cc) is = i:run' cc is
+    run' (Output i cc) is  = i:run' cc is
     run' (Paused c) (i:is) = run' (runCont c (Just i)) is
 
 

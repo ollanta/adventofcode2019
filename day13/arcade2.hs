@@ -48,7 +48,7 @@ solve program = lastN 5 $ map draw interesting
 
     inputs = 0:botinp ps bs
 
-    outputs = run $ initComputer program inputs
+    outputs = run (initComputer program) inputs
 
     (xs, ys, ts) = split outputs
     instrs = zip (zip xs ys) ts

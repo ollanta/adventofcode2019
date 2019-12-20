@@ -82,46 +82,39 @@ solve premap = [drawm omap
 
 getPortcoords omap = portCoords
   where
-    minX = minimum . map fst . M.keys $ portals
-    maxX = maximum . map fst . M.keys $ portals
-    minY = minimum . map snd . M.keys $ portals
-    maxY = maximum . map snd . M.keys $ portals
+    portals = M.filter isPort omap
 
-    midX = (minX+maxX) `div` 2
-    midY = (minY+maxY) `div` 2
+    extX = map (\f -> f . map fst . M.keys $ portals) [minimum, maximum]
+    extY = map (\f -> f . map snd . M.keys $ portals) [minimum, maximum]
 
     portalC :: String -> [(Coord, Integer)]
-    portalC s = map (\c -> (openSpace c, if isInner c then -1 else 1)) portc
+    portalC s = map (\c -> (openSpace c, if isOuter c then 1 else -1)) portc
       where
-        isInner (x,y) = abs(x-midX) < midX-minX && abs(y-midY) < midY-minY
+        isOuter (x,y) = any (==x) extX || any (==y) extY
         openSpace pc = head . map fst . filter (\(c,o) -> o==Open) . map (\c -> (c, omap M.! c)) $ (neighbors pc)
         portc = M.keys . M.filter (==Port s) $ omap
-
-    portals = M.filter isPort omap
 
     portCoords = M.fromList . map (\s -> (s, portalC s)) . map fromPort $ M.elems portals
 
 
-mergePorts omap = M.unions [remports, newports, omap]
+mergePorts omap = M.unions [remports, ports', omap]
   where
     ports = M.filter isPort omap
     lookupd c = M.lookupDefault EmptySpace c omap
 
-    rports = M.filterWithKey (\(x,y) v -> isPort (lookupd (x-1,y))) ports
-    rports' = M.mapWithKey (\(x,y) v -> Port $ fromPort (omap M.! (x-1,y)) ++ fromPort v) rports
+    toMainPort :: Coord -> Obj -> Maybe Obj
+    toMainPort (x,y) p
+      | any (==Open) hori = Just . Port $ fixName hori
+      | any (==Open) vert = Just . Port $ fixName vert
+      | otherwise         = Nothing
+      where
+        hori = map lookupd [(x',y) | x' <- [x-1..x+1]]
+        vert = map lookupd [(x,y') | y' <- [y-1..y+1]]
+        fixName = concat . map fromPort . filter isPort
 
-    dports = M.filterWithKey (\(x,y) v -> isPort (lookupd (x,y-1))) ports
-    dports' = M.mapWithKey (\(x,y) v -> Port $ fromPort (omap M.! (x,y-1)) ++ fromPort v) dports
-    
-    lports = M.filterWithKey (\(x,y) v -> isPort (lookupd (x+1,y))) ports
-    lports' = M.mapWithKey (\(x,y) v -> Port $ fromPort v ++ fromPort (omap M.! (x+1,y))) lports
+    ports' = M.mapMaybeWithKey toMainPort ports
 
-    uports = M.filterWithKey (\(x,y) v -> isPort (lookupd (x,y+1))) ports
-    uports' = M.mapWithKey (\(x,y) v -> Port $ fromPort v ++ fromPort (omap M.! (x,y+1))) uports
-
-    newports = M.unions [rports', dports', lports', uports']
-    newports' = M.filterWithKey (\c v -> any (\c' -> lookupd c'==Open) (neighbors c)) newports
-    remports = M.map (\_ -> EmptySpace) $ M.difference ports newports'
+    remports = M.map (\_ -> EmptySpace) $ M.difference ports ports'
 
 
 neighbors (x,y) = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]

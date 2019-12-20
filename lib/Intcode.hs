@@ -3,6 +3,7 @@ module Intcode
   , Program
   , initComputer
   , run
+  , runOne
   , readProgram
   ) where
 
@@ -13,7 +14,6 @@ import qualified Data.List as L
 data Computer = Computer {
   pointer :: Integer,
   relPointer :: Integer,
-  inputs :: [Integer],
   program :: Program
 }
 
@@ -40,23 +40,50 @@ toProgram :: [Integer] -> M.HashMap Integer Integer
 toProgram list = M.fromList $ zip [0..] list
 
 
-initComputer :: Program -> [Integer] -> Computer
-initComputer program inputs = Computer 0 0 inputs program
+initComputer :: Program -> Computer
+initComputer program = Computer 0 0 program
 
 
-run :: Computer -> [Integer]
-run c@Computer{pointer=i, relPointer=reli, inputs=rs, program=prog}
-  | op == 99 = []
-  | op == 1  = run c{pointer=i+4, program=padd}
-  | op == 2  = run c{pointer=i+4, program=pmul}
-  | op == 3  = run c{pointer=i+2, inputs=readRest, program=pinsert (arg 1) readNext}
-  | op == 4  = rarg 1 : run c{pointer=i+2}
-  | op == 5  = run c{pointer=jumpif True}
-  | op == 6  = run c{pointer=jumpif False}
-  | op == 7  = run c{pointer=i+4, program=pless}
-  | op == 8  = run c{pointer=i+4, program=pequals}
-  | op == 9  = run c{pointer=i+2, relPointer=reli + rarg 1}
+run :: Computer -> [Integer] -> [Integer]
+run c inputs = run' started inputs
   where
+    started = runCont c Nothing -- start, in case no input is needed
+
+    run' :: CompCont -> [Integer] -> [Integer]
+    run' Halted _ = []
+    run' (Output i cc) is  = i:run' cc is
+    run' (Paused c) (i:is) = run' (runCont c (Just i)) is
+
+
+data CompCont = Output Integer CompCont | Paused Computer | Halted
+
+
+runOne :: Computer -> Integer -> ([Integer], Maybe Computer)
+runOne c i = runOne' (runCont c (Just i)) []
+  where
+    runOne' :: CompCont -> [Integer] -> ([Integer], Maybe Computer)
+    runOne' Halted acc     = (reverse acc, Nothing)
+    runOne' (Paused c) acc = (reverse acc, Just c)
+    runOne' (Output i cc) acc = runOne' cc (i:acc)
+
+
+runCont :: Computer -> Maybe Integer -> CompCont
+runCont c@Computer{pointer=i, relPointer=reli, program=prog} input
+  | op == 99 = Halted
+  | op == 1  = runNext c{pointer=i+4, program=padd}
+  | op == 2  = runNext c{pointer=i+4, program=pmul}
+  | op == 3  = case input of
+      Just input -> runCont c{pointer=i+2, program=pinsert (arg 1) input} Nothing
+      Nothing  -> Paused c
+  | op == 4  = Output (rarg 1) (runNext c{pointer=i+2})
+  | op == 5  = runNext c{pointer=jumpif True}
+  | op == 6  = runNext c{pointer=jumpif False}
+  | op == 7  = runNext c{pointer=i+4, program=pless}
+  | op == 8  = runNext c{pointer=i+4, program=pequals}
+  | op == 9  = runNext c{pointer=i+2, relPointer=reli + rarg 1}
+  where
+    runNext c = runCont c input
+
     plookup (Pos k) = M.lookupDefault 0 k prog
     plookup (Val v) = v
     pinsert (Pos k) param = M.insert k param prog
@@ -76,8 +103,6 @@ run c@Computer{pointer=i, relPointer=reli, inputs=rs, program=prog}
       ]
     arg i = args !! (i-1)
     rarg i = plookup (arg i)
-
-    readNext:readRest = rs
 
     padd = pinsert (arg 3) (rarg 1 + rarg 2)
     pmul = pinsert (arg 3) (rarg 1 * rarg 2)

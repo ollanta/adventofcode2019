@@ -29,7 +29,7 @@ solve program = [show . length $ finalSP M.! oxygenPos,
     initCoord = (0,0)
     initMap = M.singleton initCoord Open
 
-    outputs = run $ initComputer program inputs
+    outputs = run (initComputer program) inputs
 
     moves = zipWith toMove inputs outputs
 

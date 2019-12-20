@@ -15,7 +15,7 @@ split [] = ([],[],[])
 solve :: Program -> Int
 solve program = M.size $ M.filter (==2) finalmap
   where
-    outputs = run $ initComputer program []
+    outputs = run (initComputer program) []
 
     (xs, ys, ts) = split outputs
     instrs = zip (zip xs ys) ts

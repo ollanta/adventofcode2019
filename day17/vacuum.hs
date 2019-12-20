@@ -18,7 +18,7 @@ showD (m, sol) = drawMap id m ++ show sol
 solve :: Program -> (M.HashMap (Integer,Integer) Char, Integer)
 solve program = (chmap, sum . map (\(a,b) -> a*b) . M.keys $ intersections)
   where
-    outs = run $ initComputer program []
+    outs = run (initComputer program) []
     chlist = map (chr.fromInteger) outs
 
     chmap :: M.HashMap (Integer,Integer) Char

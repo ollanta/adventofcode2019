@@ -27,7 +27,7 @@ solve program = contOutput outs2
               "y"
              ]
 
-    outs2 = run $ initComputer program' (map (toInteger.ord) . unlines $ inputs)
+    outs2 = run (initComputer program') (map (toInteger.ord) . unlines $ inputs)
 
 
 contOutput [a] = [show a]

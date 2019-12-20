@@ -36,7 +36,7 @@ draw pmap = unlines . reverse . lines $ drawn
 solve :: Program -> String
 solve program = draw (last maps)
   where
-    outputs = run $ initComputer program inputs
+    outputs = run (initComputer program) inputs
 
     (paints, turns) = split outputs 
     directions = drop 1 $ scanl turn (0,1) turns

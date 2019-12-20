@@ -31,7 +31,7 @@ move (x,y) (dx,dy) = (x+dx, y+dy)
 solve :: Program -> Int
 solve program = M.size (last maps)
   where
-    outputs = run $ initComputer program inputs
+    outputs = run (initComputer program) inputs
 
     (paints, turns) = split outputs 
     directions = drop 1 $ scanl turn (0,1) turns

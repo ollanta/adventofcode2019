@@ -16,4 +16,4 @@ solve program = loop (10,5) 99
       | check (x+d,y) = loop (x,y+1) d
       | otherwise = c
 
-    check (x,y) = (==0) . head . run $ initComputer program [x,y]
+    check (x,y) = (==0) . head . run (initComputer program) $ [x,y]

@@ -16,8 +16,7 @@ solve :: Program -> [String]
 solve program = contOutput outs
   where
 
-    inputs = ["NOT A T", "OR A T",  -- T = true
-              "AND A T",
+    inputs = ["OR A T",
               "AND B T",
               "AND C T", -- T = all(A,B,C)
               "NOT T J", -- J = !all(A,B,C)

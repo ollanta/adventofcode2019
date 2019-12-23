@@ -5,6 +5,7 @@ dependencies:
 - unordered-containers
 - vector
 - heap
+- matrix
 
 library:
   source-dirs:

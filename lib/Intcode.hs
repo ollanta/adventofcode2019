@@ -4,6 +4,7 @@ module Intcode
   , initComputer
   , run
   , runOne
+  , runMulti
   , readProgram
   ) where
 
@@ -65,6 +66,15 @@ runOne c i = runOne' (runCont c (Just i)) []
     runOne' Halted acc     = (reverse acc, Nothing)
     runOne' (Paused c) acc = (reverse acc, Just c)
     runOne' (Output i cc) acc = runOne' cc (i:acc)
+
+
+runMulti :: Computer -> [Integer] -> ([Integer], Maybe Computer)
+runMulti c inputs = L.foldl helper ([], Just c) inputs
+  where
+    helper (outputs, Nothing) _ = (outputs, Nothing)
+    helper (outputs, Just c)  i = (outputs ++ newout, c')
+      where
+        (newout, c') = runOne c i
 
 
 runCont :: Computer -> Maybe Integer -> CompCont

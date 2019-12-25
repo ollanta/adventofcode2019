@@ -1,11 +1,5 @@
-import Text.Parsec
-import qualified Data.Vector.Unboxed as V
-import qualified Data.HashMap.Strict as M
-import Helpers
 import Intcode
 import Data.Char
-import System.IO (stdin, hSetBuffering, BufferMode(NoBuffering), hSetEcho)
-import System.IO.Unsafe (unsafePerformIO)
 
 
 main :: IO ()

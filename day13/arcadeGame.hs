@@ -4,15 +4,16 @@ import Data.List
 import Intcode
 import Helpers
 import System.IO (stdin, hSetBuffering, BufferMode(NoBuffering), hSetEcho)
-import System.IO.Unsafe (unsafePerformIO)
+
 
 main :: IO ()
 main = do
-  inp <- readFile "input2.txt"
+  prg <- readFile "input2.txt"
   hSetBuffering stdin NoBuffering
   hSetEcho stdin False
 
-  maps <- solve (readProgram inp)
+  inputs <- getInputs
+  let maps = solve (readProgram prg) inputs
 
   putStrLn (showD maps)
   putStrLn ""
@@ -42,23 +43,18 @@ split (x1:x2:x3:xs) = let (xr1,xr2,xr3) = split xs in (x1:xr1, x2:xr2, x3:xr3)
 split [] = ([],[],[])
 
 
-solve :: Program -> IO [String]
-solve program = do
-
-  let outputs = run $ initComputer program getInputs
-  let (xs, ys, ts) = split outputs
-  let instrs = zip (zip xs ys) ts
-  let maps = scanl (\m (c,t) -> M.insert c t m) M.empty instrs
-
-  return $ map draw (drop 1 maps)
-
-
-getInputs = map (\i -> unsafePerformIO $ getOneKey i) [0..]
+solve :: Program -> [Integer] -> [String]
+solve program inputs = map draw (drop 1 maps)
   where
-    getOneKey :: Integer -> IO Integer
-    getOneKey i = do
-        key <- getChar
-        case key of 
-            'a' -> return (-1)
-            'd' -> return 1
-            _ -> return 0
+    outputs = run (initComputer program) inputs
+    (xs, ys, ts) = split outputs
+    instrs = zip (zip xs ys) ts
+    maps = scanl (\m (c,t) -> M.insert c t m) M.empty instrs
+
+
+getInputs = getContents >>= return . map toInput
+  where
+    toInput :: Char -> Integer
+    toInput 'a' = -1
+    toInput 'd' = 1
+    toInput _   = 0
